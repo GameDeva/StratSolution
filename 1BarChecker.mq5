@@ -16,11 +16,11 @@ input double Lot = 1; // Lot to trade
 input ENUM_TIMEFRAMES TimeFrameToTrade = PERIOD_M15; // TimeFrame to trade
 input int EA_Magic = 09876; // Expert Advisor Magic Number
 input double targetRiskRewardRatio = 1; // Risk Reward ratio is defined as (1 : riskRewardRatio)
-input double takeProfitPercent = 1; // 0-1 take profit level. 
+input double takeProfitPercent = 1; // 0-1 take profit level.
 input bool use312 = false;
 input bool use212 = false;
 input bool useRevstratLong = false;
-input bool useRevstratShort = false;   
+input bool useRevstratShort = false;
 input int StartHour = 15;       // Time to start trading ( hours of 24 hr clock ) 0 for both disables
 input int StopHour = 21;        // Time to stop trading ( hours of 24 hr clock ) 0 for both disables
 
@@ -39,13 +39,19 @@ ENUM_TIMEFRAMES FTFCToCheck[];
 
 // 1 bar test vars
 int greenBarContinuationBull = 0;
-int redBarContinuationBull = 0; 
+int redBarContinuationBull = 0;
 int greenBarContinuationBear = 0;
 int redBarContinuationBear = 0;
 int greenBarReversalBull = 0;
-int redBarReversalBull = 0; 
+int redBarReversalBull = 0;
 int greenBarReversalBear = 0;
 int redBarReversalBear = 0;
+
+int continuationBull = 0;
+int continuationBear = 0;
+int reversalBull = 0;
+int reversalBear = 0;
+
 int allTrades = 0;
 
 //+------------------------------------------------------------------+
@@ -65,7 +71,7 @@ bool IsWithinFTFC(bool forLong, double orderPrice)
 
       // Ensure open price is appropriate
       isWithin &= forLong ? mrate[0].open <= orderPrice : mrate[0].open >= orderPrice;
-      // Redundant 
+      // Redundant
       // isWithin &= forLong ? IsGreenBar(mrate[0].open, mrate[0].close) : !IsGreenBar(mrate[0].open, mrate[0].close);
      }
 
@@ -106,16 +112,16 @@ int OnInit()
 void OnDeinit(const int reason)
   {
 //---
-   // add up the results for the 1 bar checks
-   Print("greenBarContinuationBull: ", greenBarContinuationBull, "(", (greenBarContinuationBull / allTrades) , ")");
-   Print("redBarContinuationBull: ", redBarContinuationBull, "(", redBarContinuationBull / allTrades , ")");
-   Print("greenBarContinuationBear: ", greenBarContinuationBear, "(", greenBarContinuationBear / allTrades , ")");
-   Print("redBarContinuationBear: ", redBarContinuationBear, "(", redBarContinuationBear / allTrades , ")");
-   Print("greenBarReversalBull: ", greenBarReversalBull, "(", greenBarReversalBull / allTrades , ")");
-   Print("redBarReversalBull: ", redBarReversalBull, "(", redBarReversalBull / allTrades , ")");
-   Print("greenBarReversalBear: ", greenBarReversalBear, "(", greenBarReversalBear / allTrades , ")");
-   Print("redBarReversalBear: ", redBarReversalBear, "(", redBarReversalBear / allTrades , ")");
-   
+// add up the results for the 1 bar checks
+   Print("greenBarContinuationBull: ", greenBarContinuationBull, ", ", continuationBull, "(", NormalizeDouble(((double)greenBarContinuationBull / continuationBull)*100, 0), "%)");
+   Print("redBarContinuationBull: ", redBarContinuationBull, ", ", continuationBull, "(", NormalizeDouble(((double)redBarContinuationBull / continuationBull)*100, 0), "%)");
+   Print("greenBarContinuationBear: ", greenBarContinuationBear, ", ", continuationBear, "(", NormalizeDouble(((double)greenBarContinuationBear / continuationBear)*100, 0), "%)");
+   Print("redBarContinuationBear: ", redBarContinuationBear, ", ", continuationBear, "(", NormalizeDouble(((double)redBarContinuationBear / continuationBear)*100, 0), "%)");
+   Print("greenBarReversalBull: ", greenBarReversalBull, ", ", reversalBull, "(", NormalizeDouble(((double)greenBarReversalBull / reversalBull)*100, 0), "%)");
+   Print("redBarReversalBull: ", redBarReversalBull, ", ", reversalBull, "(", NormalizeDouble(((double)redBarReversalBull / reversalBull)*100, 0), "%)");
+   Print("greenBarReversalBear: ", greenBarReversalBear, ", ", reversalBear, "(", NormalizeDouble(((double)greenBarReversalBear / reversalBear)*100, 0), "%)");
+   Print("redBarReversalBear: ", redBarReversalBear, ", ", reversalBear, "(", NormalizeDouble(((double)redBarReversalBear / reversalBear)*100, 0), "%)");
+
    Print("Total Trades: ", allTrades);
   }
 //+------------------------------------------------------------------+
@@ -126,11 +132,7 @@ void OnTick()
 //---
    if(!IsWithinTradingHours())
       return;
-
-// On bar after 312 212, we just check the 1 bar and increment appropriately. 
-
-
-
+      
    int period_seconds=PeriodSeconds(_Period);                     // Number of seconds in current chart period
    datetime new_time=TimeCurrent()/period_seconds*period_seconds; // Time of bar opening on current chart
    bool IsNewBar = current_chart.isNewBar(new_time);
@@ -150,66 +152,81 @@ void OnTick()
       return;
      }
 
-   if(GetBarType(mrate[3].low, mrate[3].high, mrate[4].low, mrate[4].high) == TwoUpBar 
+   if(GetBarType(mrate[3].low, mrate[3].high, mrate[4].low, mrate[4].high) == TwoUpBar
       && GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == InsideBar
       && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == TwoUpBar)
-      {
+     {
+      if(mrate[1].high >= mrate[3].high)
+        {
          if(IsGreenBar(mrate[2].open, mrate[2].close))
-         {
+           {
             greenBarContinuationBull++;
-            allTrades++;
-         }
-         else 
-         {
+           }
+         else
+           {
             redBarContinuationBull++;
-            allTrades++;
-         }
-      }
-   else if(GetBarType(mrate[3].low, mrate[3].high, mrate[4].low, mrate[4].high) == TwoUpBar 
-      && GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == InsideBar
-      && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == TwoDownBar)
-      {
-         if(IsGreenBar(mrate[2].open, mrate[2].close))
-         {
-            greenBarReversalBear++;
-            allTrades++;
-         }
-         else 
-         {
-            redBarReversalBear++;
-            allTrades++;
-         }         
-      }
-   else if(GetBarType(mrate[3].low, mrate[3].high, mrate[4].low, mrate[4].high) == TwoDownBar 
-      && GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == InsideBar
-      && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == TwoDownBar)
-      {
-         if(IsGreenBar(mrate[2].open, mrate[2].close))
-         {
-            greenBarContinuationBear++;
-            allTrades++;
-         }
-         else 
-         {
-            redBarContinuationBear++;
-            allTrades++;
-         }         
-      }
-   else if(GetBarType(mrate[3].low, mrate[3].high, mrate[4].low, mrate[4].high) == TwoDownBar 
-      && GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == InsideBar
-      && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == TwoUpBar)
-      {
-         if(IsGreenBar(mrate[2].open, mrate[2].close))
-         {
-            greenBarReversalBull++;
-            allTrades++;
-         }
-         else 
-         {
-            redBarReversalBull++;
-            allTrades++;
-         }         
-      }
+           }
+           continuationBull++;
+           allTrades++;
+        }
+     }
+   else
+      if(GetBarType(mrate[3].low, mrate[3].high, mrate[4].low, mrate[4].high) == TwoUpBar
+         && GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == InsideBar
+         && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == TwoDownBar)
+        {
+         if(mrate[1].low >= mrate[3].low)
+           {
+            if(IsGreenBar(mrate[2].open, mrate[2].close))
+              {
+               greenBarReversalBear++;
+              }
+            else
+              {
+               redBarReversalBear++;
+              }
+              reversalBear++;
+              allTrades++;
+           }
+        }
+      else
+         if(GetBarType(mrate[3].low, mrate[3].high, mrate[4].low, mrate[4].high) == TwoDownBar
+            && GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == InsideBar
+            && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == TwoDownBar)
+           {
+            if(mrate[1].low >= mrate[3].low)
+              {
+               if(IsGreenBar(mrate[2].open, mrate[2].close))
+                 {
+                  greenBarContinuationBear++;
+                 }
+               else
+                 {
+                  redBarContinuationBear++;
+                 }
+                  continuationBear++;
+                  allTrades++;
+              }
+           }
+         else
+            if(GetBarType(mrate[3].low, mrate[3].high, mrate[4].low, mrate[4].high) == TwoDownBar
+               && GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == InsideBar
+               && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == TwoUpBar)
+              {
+               if(mrate[1].high >= mrate[3].high)
+                 {
+                  if(IsGreenBar(mrate[2].open, mrate[2].close))
+                    {
+                     greenBarReversalBull++;
+                    }
+                  else
+                    {
+                     redBarReversalBull++;
+                    }
+                  reversalBull++;
+                  allTrades++;
+                 }
+              }
 
 
   }

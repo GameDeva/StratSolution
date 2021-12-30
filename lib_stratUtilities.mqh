@@ -36,13 +36,38 @@ BarType GetBarType(double barLow, double barHigh, double oldLow, double oldHigh)
      }
   }
 
+BarType GetBarType(MqlRates& mrates[], int barIndex)
+  {
+   if(mrates[barIndex].low >= mrates[barIndex + 1].low)
+     {
+      if(mrates[barIndex].high <= mrates[barIndex + 1].high)
+        {
+         return InsideBar;
+        }
+      else
+        {
+         return TwoUpBar;
+        }
+     }
+   else
+     {
+      if(mrates[barIndex].high <= mrates[barIndex + 1].high)
+        {
+         return TwoDownBar;
+        }
+      else
+        {
+         return OutsideBar;
+        }
+     }
+  }
 
 // Determines and returns true if bar ended on high or false if low
 bool IsGreenBar(double open, double close, double magnitude = 0)
   {
-   if(open >= close)
+   if(open < close)
      {
-      return open - close >= magnitude;
+      return close - open >= magnitude;
      }
    return false;
   }
@@ -53,24 +78,46 @@ bool IsGreenBar(double open, double close, double magnitude = 0)
 //+------------------------------------------------------------------+
 bool Is312(MqlRates& mrate[])
   {
-   return GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == OutsideBar && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == InsideBar;
+   return GetBarType(mrate, 2) == OutsideBar && GetBarType(mrate, 1) == InsideBar;
   }
-
+  
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool Is212(MqlRates& mrate[])
+bool Is212BullCont(MqlRates& mrate[])
   {
-   return (GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == TwoUpBar || GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == TwoDownBar) && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == InsideBar;
+   return (GetBarType(mrate, 2) == TwoUpBar || GetBarType(mrate, 2) == TwoDownBar) 
+            && GetBarType(mrate, 1) == InsideBar
+            && IsGreenBar(mrate[2].open, mrate[2].close);
   }
 
+bool Is212BearCont(MqlRates& mrate[])
+  {
+   return (GetBarType(mrate, 2) == TwoUpBar || GetBarType(mrate, 2) == TwoDownBar) 
+            && GetBarType(mrate, 1) == InsideBar
+            && !IsGreenBar(mrate[2].open, mrate[2].close);           
+  }
+
+bool Is212BullRev(MqlRates& mrate[])
+  {
+   return (GetBarType(mrate, 2) == TwoUpBar || GetBarType(mrate, 2) == TwoDownBar) 
+            && GetBarType(mrate, 1) == InsideBar
+            && !IsGreenBar(mrate[2].open, mrate[2].close);           
+  }
+  
+bool Is212BearRev(MqlRates& mrate[])
+  {
+   return (GetBarType(mrate, 2) == TwoUpBar || GetBarType(mrate, 2) == TwoDownBar) 
+            && GetBarType(mrate, 1) == InsideBar
+            && IsGreenBar(mrate[2].open, mrate[2].close);           
+  }
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
 bool Is122RevStratShort(MqlRates& mrate[])
   {
-   return GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == InsideBar
-          && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == TwoUpBar;
+   return GetBarType(mrate, 2) == InsideBar
+          && GetBarType(mrate, 1) == TwoUpBar;
   }
 
 //+------------------------------------------------------------------+
@@ -78,7 +125,7 @@ bool Is122RevStratShort(MqlRates& mrate[])
 //+------------------------------------------------------------------+
 bool Is122RevStratLong(MqlRates& mrate[])
   {
-   return GetBarType(mrate[2].low, mrate[2].high, mrate[3].low, mrate[3].high) == InsideBar
-          && GetBarType(mrate[1].low, mrate[1].high, mrate[2].low, mrate[2].high) == TwoDownBar;
+   return GetBarType(mrate, 2) == InsideBar
+          && GetBarType(mrate, 1) == TwoDownBar;
   }
 //+------------------------------------------------------------------+
