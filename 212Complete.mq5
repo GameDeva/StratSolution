@@ -118,7 +118,7 @@ bool TryNormalLong(MqlRates& mrate[])
      }
 
 // The calculated Risk reward ratio has to be >= our targetRiskRewardRatio
-   if(reward / risk >= targetRiskRewardRatio)
+   if(useRiskForTakeProfit || (reward / risk >= targetRiskRewardRatio))
      {
       risk += addtionalRisk * risk;
       // Print("Risk reward buy: ", reward / risk);
@@ -166,7 +166,7 @@ bool TryNormalShort(MqlRates& mrate[])
      }
 
 // The calculated Risk reward ratio has to be >= our targetRiskRewardRatio
-   if(reward / risk >= targetRiskRewardRatio)
+   if(useRiskForTakeProfit || (reward / risk >= targetRiskRewardRatio))
      {
       risk += addtionalRisk * risk;
       double takeProfit = useRiskForTakeProfit ? mrate[1].low - risk : mrate[1].low - (reward * takeProfitPercent);
